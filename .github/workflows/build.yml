@@ -1,0 +1,97 @@
+name: Recovery Build (H08 ASR dove)
+
+on:
+  workflow_dispatch:
+    inputs:
+      MANIFEST_URL:
+        description: 'MANIFEST_URL'
+        required: true
+        default: 'https://github.com/minimal-manifest-twrp/platform_manifest_twrp_omni'
+      MANIFEST_BRANCH:
+        description: 'MANIFEST_BRANCH'
+        required: true
+        default: 'twrp-8.1'
+      DEVICE_TREE_URL:
+        description: 'DEVICE_TREE_URL'
+        required: true
+        default: 'https://github.com/hxzbaka/twrp_device_asr_dove_watch-H08'
+      DEVICE_TREE_BRANCH:
+        description: 'DEVICE_TREE_BRANCH'
+        required: true
+        default: 'main'
+      DEVICE_PATH:
+        description: 'DEVICE_PATH'
+        required: true
+        default: 'device/asr/dove_watch'
+      DEVICE_NAME:
+        description: 'DEVICE_NAME'
+        required: true
+        default: 'dove_watch'
+      MAKEFILE_NAME:
+        description: 'MAKEFILE_NAME'
+        required: true
+        default: 'omni_dove_watch'
+      BUILD_TARGET:
+        description: 'BUILD_TARGET'
+        required: true
+        default: 'recovery'
+
+jobs:
+  build:
+    if: github.event.repository.owner.id == github.event.sender.id
+    runs-on: ubuntu-22.04
+    container:
+      image: ubuntu:20.04
+      options: --user root
+    steps:
+    - name: Show parameters
+      run: |
+        echo "Manifest: ${{ github.event.inputs.MANIFEST_URL }} / ${{ github.event.inputs.MANIFEST_BRANCH }}"
+        echo "Tree: ${{ github.event.inputs.DEVICE_TREE_URL }} / ${{ github.event.inputs.DEVICE_TREE_BRANCH }}"
+        echo "Path: ${{ github.event.inputs.DEVICE_PATH }}  Makefile: ${{ github.event.inputs.MAKEFILE_NAME }}"
+
+    - name: Install build environment
+      run: |
+        apt-get update
+        DEBIAN_FRONTEND=noninteractive apt-get install -y \
+          git-core gnupg flex bison gperf build-essential zip curl wget zlib1g-dev \
+          gcc-multilib g++-multilib libc6-dev-i386 lib32ncurses5-dev \
+          x11proto-core-dev libx11-dev lib32z-dev libgl1-mesa-dev libxml2-utils \
+          xsltproc unzip rsync fontconfig python3 python2 ccache libssl-dev \
+          libreadline-dev bc lzop pngcrush schedtool squashfs-tools imagemagick \
+          libbz2-dev liblz4-tool libncurses5 libncurses5-dev libsdl1.2-dev \
+          libwxgtk3.0-gtk3-dev openjdk-8-jdk
+        git config --global --add safe.directory '*'
+        git config --global user.name "builder"
+        git config --global user.email "builder@example.com"
+        curl https://storage.googleapis.com/git-repo-downloads/repo -o /usr/local/bin/repo \
+          || apt-get install -y repo
+        chmod a+x /usr/local/bin/repo
+        java -version 2>&1 | head -1
+
+    - name: Sync omni twrp-8.1 sources
+      run: |
+        mkdir -p $GITHUB_WORKSPACE/work
+        cd $GITHUB_WORKSPACE/work
+        repo init -u ${{ github.event.inputs.MANIFEST_URL }} -b ${{ github.event.inputs.MANIFEST_BRANCH }} --depth=1
+        repo sync -c -j8 --no-tags --fail-fast
+
+    - name: Clone device tree
+      run: |
+        cd $GITHUB_WORKSPACE/work
+        git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ${{ github.event.inputs.DEVICE_PATH }}
+
+    - name: Build recovery image
+      run: |
+        cd $GITHUB_WORKSPACE/work
+        source build/envsetup.sh
+        lunch omni_dove_watch-userdebug
+        mka recoveryimage -j$(nproc)
+        ls -la out/target/product/*/recovery.img
+
+    - name: Upload recovery.img
+      uses: actions/upload-artifact@v4
+      with:
+        name: twrp-dove_watch
+        path: work/out/target/product/*/recovery.img
+        if-no-files-found: error
