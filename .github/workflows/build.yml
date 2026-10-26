@@ -82,6 +82,8 @@ jobs:
       run: |
         cd $GITHUB_WORKSPACE/work
         git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ${{ github.event.inputs.DEVICE_PATH }}
+        find ${{ github.event.inputs.DEVICE_PATH }} -name "*.bp" -delete
+        echo "removed .bp files for legacy soong compat"
 
     - name: Build recovery image
       shell: bash
