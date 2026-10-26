@@ -82,9 +82,10 @@ jobs:
         git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ${{ github.event.inputs.DEVICE_PATH }}
 
     - name: Build recovery image
+      shell: bash
       run: |
         cd $GITHUB_WORKSPACE/work
-        source build/envsetup.sh
+        . build/envsetup.sh
         lunch omni_dove_watch-userdebug
         mka recoveryimage -j$(nproc)
         ls -la out/target/product/*/recovery.img
