@@ -84,7 +84,8 @@ jobs:
         cd $GITHUB_WORKSPACE/work
         git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ${{ github.event.inputs.DEVICE_PATH }}
         find ${{ github.event.inputs.DEVICE_PATH }} -name "*.bp" -delete
-        echo "removed .bp files for legacy soong compat"
+        printf '\nTW_INCLUDE_CRYPTO := false\nTW_SCREEN_BLANK_ON_BOOT := false\nTW_INCLUDE_KEYMASTER := false\nTW_USE_FSCRYPT := false\n' >> ${{ github.event.inputs.DEVICE_PATH }}/BoardConfig.mk
+        echo "removed .bp files + disabled crypto for legacy compat"
 
     - name: Build recovery image
       shell: bash
