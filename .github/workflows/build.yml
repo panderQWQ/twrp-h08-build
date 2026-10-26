@@ -61,6 +61,8 @@ jobs:
           libreadline-dev bc lzop pngcrush schedtool squashfs-tools imagemagick \
           libbz2-dev liblz4-tool libncurses5 libncurses5-dev libsdl1.2-dev \
           libwxgtk3.0-gtk3-dev openjdk-8-jdk
+        ln -sf /usr/bin/python2 /usr/local/bin/python || true
+        python --version 2>&1 || true
         git config --global --add safe.directory '*'
         git config --global user.name "builder"
         git config --global user.email "builder@example.com"
